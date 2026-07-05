@@ -330,7 +330,29 @@ FinRetiro:
 
         .ELSEIF eax == IDC_HISTORIAL
 
-            ; Parte 8
+            ;=============================================================
+; PARTE 8/10 - HISTORIAL DE MOVIMIENTOS
+;=============================================================
+
+;-------------------------------------------------------------
+; BOTÓN: HISTORIAL
+;-------------------------------------------------------------
+
+
+
+
+    ;---------------------------------------------------------
+    ; Llamar al sistema de historial
+    ;---------------------------------------------------------
+
+    invoke MostrarHistorial, CuentaActual
+
+    ;---------------------------------------------------------
+    ; Mensaje informativo
+    ;---------------------------------------------------------
+
+    invoke MessageBox, hMenu, CSTR("Historial mostrado correctamente."), ADDR TituloMenu, MB_OK or MB_ICONINFORMATION
+
 
         ;=================================================
         ; BOTÓN CERRAR SESIÓN
