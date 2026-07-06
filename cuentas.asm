@@ -130,3 +130,296 @@ CuentaOrigen CUENTA ?
 
 .code
 
+;=============================================================
+; PARTE 2/14
+; Apertura y cierre de banco.dat
+;=============================================================
+
+;-------------------------------------------------------------
+; AbrirArchivo
+;
+; Abre banco.dat para lectura y escritura.
+;
+; Retorna:
+;   EAX = TRUE  -> Archivo abierto
+;   EAX = FALSE -> Error
+;-------------------------------------------------------------
+
+AbrirArchivo PROC
+
+    invoke CreateFile,\
+            ADDR ArchivoBanco,\
+            GENERIC_READ or GENERIC_WRITE,\
+            FILE_SHARE_READ,\
+            NULL,\
+            OPEN_ALWAYS,\
+            FILE_ATTRIBUTE_NORMAL,\
+            NULL
+
+    mov hArchivo,eax
+
+    cmp eax,INVALID_HANDLE_VALUE
+    je ErrorAbrir
+
+    mov eax,TRUE
+    ret
+
+ErrorAbrir:
+
+    mov eax,FALSE
+    ret
+
+AbrirArchivo ENDP
+
+
+;-------------------------------------------------------------
+; CerrarArchivo
+;
+; Cierra el archivo si está abierto.
+;
+; Retorna:
+;   TRUE
+;-------------------------------------------------------------
+
+CerrarArchivo PROC
+
+    cmp hArchivo,INVALID_HANDLE_VALUE
+    je FinCerrar
+
+    invoke CloseHandle,hArchivo
+
+    mov hArchivo,INVALID_HANDLE_VALUE
+
+FinCerrar:
+
+    mov eax,TRUE
+    ret
+
+CerrarArchivo ENDP
+
+
+;-------------------------------------------------------------
+; ReiniciarBuffers
+;
+; Limpia todos los buffers utilizados.
+;-------------------------------------------------------------
+
+ReiniciarBuffers PROC
+
+    invoke RtlZeroMemory,\
+            ADDR BufferArchivo,\
+            SIZEOF BufferArchivo
+
+    invoke RtlZeroMemory,\
+            ADDR BufferLinea,\
+            SIZEOF BufferLinea
+
+    invoke RtlZeroMemory,\
+            ADDR BufferUsuario,\
+            SIZEOF BufferUsuario
+
+    invoke RtlZeroMemory,\
+            ADDR BufferPIN,\
+            SIZEOF BufferPIN
+
+    invoke RtlZeroMemory,\
+            ADDR BufferNumero,\
+            SIZEOF BufferNumero
+
+    mov BytesLeidos,0
+    mov BytesEscritos,0
+    mov PosicionActual,0
+    mov TamArchivo,0
+
+    mov eax,TRUE
+    ret
+
+ReiniciarBuffers ENDP
+
+
+;-------------------------------------------------------------
+; ObtenerTamArchivo
+;
+; Obtiene el tamaño del archivo banco.dat.
+;
+; Retorna:
+;   EAX = tamaño del archivo
+;-------------------------------------------------------------
+
+ObtenerTamArchivo PROC
+
+    invoke GetFileSize,\
+            hArchivo,\
+            NULL
+
+    mov TamArchivo,eax
+
+    mov eax,TamArchivo
+    ret
+
+ObtenerTamArchivo ENDP
+
+;=============================================================
+; PARTE 3/14
+; Lectura del archivo banco.dat
+;=============================================================
+
+;-------------------------------------------------------------
+; LeerArchivo
+;
+; Lee completamente banco.dat dentro de BufferArchivo.
+;
+; Retorna:
+;   TRUE  -> Lectura correcta
+;   FALSE -> Error
+;-------------------------------------------------------------
+
+LeerArchivo PROC
+
+    invoke ReiniciarBuffers
+
+    invoke SetFilePointer,\
+            hArchivo,\
+            0,\
+            NULL,\
+            FILE_BEGIN
+
+    invoke ReadFile,\
+            hArchivo,\
+            ADDR BufferArchivo,\
+            SIZEOF BufferArchivo-1,\
+            ADDR BytesLeidos,\
+            NULL
+
+    cmp eax,FALSE
+    je ErrorLectura
+
+    mov esi,OFFSET BufferArchivo
+    add esi,BytesLeidos
+
+    mov BYTE PTR [esi],0
+
+    mov eax,TRUE
+    ret
+
+ErrorLectura:
+
+    mov eax,FALSE
+    ret
+
+LeerArchivo ENDP
+
+
+;-------------------------------------------------------------
+; MoverInicioArchivo
+;
+; Coloca el puntero al inicio del archivo.
+;-------------------------------------------------------------
+
+MoverInicioArchivo PROC
+
+    invoke SetFilePointer,\
+            hArchivo,\
+            0,\
+            NULL,\
+            FILE_BEGIN
+
+    mov eax,TRUE
+    ret
+
+MoverInicioArchivo ENDP
+
+
+;-------------------------------------------------------------
+; FinDeArchivo
+;
+; Devuelve TRUE cuando ya no quedan datos.
+;-------------------------------------------------------------
+
+FinDeArchivo PROC
+
+    mov eax,PosicionActual
+
+    cmp eax,BytesLeidos
+    jb HayDatos
+
+    mov eax,TRUE
+    ret
+
+HayDatos:
+
+    mov eax,FALSE
+    ret
+
+FinDeArchivo ENDP
+
+
+;-------------------------------------------------------------
+; LeerLinea
+;
+; Lee una línea desde BufferArchivo hacia BufferLinea.
+;
+; Formato esperado:
+;
+; usuario|pin|saldo
+;
+;-------------------------------------------------------------
+
+LeerLinea PROC
+
+    LOCAL indice:DWORD
+
+    invoke RtlZeroMemory,\
+            ADDR BufferLinea,\
+            SIZEOF BufferLinea
+
+    mov indice,0
+
+SiguienteCaracter:
+
+    mov eax,PosicionActual
+
+    cmp eax,BytesLeidos
+    jae FinLinea
+
+    mov esi,OFFSET BufferArchivo
+    add esi,eax
+
+    mov bl,[esi]
+
+    inc PosicionActual
+
+    cmp bl,13
+    je SaltarCR
+
+    cmp bl,10
+    je FinLinea
+
+    mov ecx,indice
+
+    mov edi,OFFSET BufferLinea
+    add edi,ecx
+
+    mov [edi],bl
+
+    inc indice
+
+    jmp SiguienteCaracter
+
+SaltarCR:
+
+    jmp SiguienteCaracter
+
+FinLinea:
+
+    mov ecx,indice
+
+    mov edi,OFFSET BufferLinea
+    add edi,ecx
+
+    mov BYTE PTR [edi],0
+
+    mov eax,TRUE
+    ret
+
+LeerLinea ENDP
