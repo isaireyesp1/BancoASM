@@ -672,3 +672,48 @@ ErrorBuscar:
 
 BuscarCuenta ENDP
 
+;=============================================================
+; PARTE 6/14
+; ValidarPIN
+;=============================================================
+
+ValidarPIN PROC lpCuenta:DWORD, lpPIN:DWORD
+
+    ;---------------------------------------------------------
+    ; Comparar el PIN recibido con el PIN de la cuenta
+    ;---------------------------------------------------------
+
+    mov esi,lpCuenta
+
+    invoke lstrcmp,\
+            lpPIN,\
+            ADDR [esi].CUENTA.PIN
+
+    cmp eax,0
+    je PINCorrecto
+
+    mov eax,FALSE
+    ret
+
+PINCorrecto:
+
+    mov eax,TRUE
+    ret
+
+ValidarPIN ENDP
+
+
+;=============================================================
+; ObtenerSaldo
+;=============================================================
+
+ObtenerSaldo PROC lpCuenta:DWORD
+
+    mov esi,lpCuenta
+
+    mov eax,[esi].CUENTA.Saldo
+
+    ret
+
+ObtenerSaldo ENDP
+
