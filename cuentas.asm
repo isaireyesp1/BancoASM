@@ -910,4 +910,90 @@ RetiroError:
 
 RetirarDinero ENDP
 
+;=============================================================
+; PARTE 9/14
+; TransferirDinero
+;=============================================================
+
+TransferirDinero PROC Monto:DWORD, lpDestino:DWORD
+
+    LOCAL SaldoOrigen:DWORD
+
+    ;---------------------------------------------------------
+    ; Validar monto
+    ;---------------------------------------------------------
+
+    mov eax,Monto
+    cmp eax,0
+    jle TransferError
+
+    ;---------------------------------------------------------
+    ; Guardar saldo actual del origen
+    ;---------------------------------------------------------
+
+    invoke ObtenerSaldo
+    mov SaldoOrigen,eax
+
+    ;---------------------------------------------------------
+    ; Verificar fondos suficientes
+    ;---------------------------------------------------------
+
+    mov eax,SaldoOrigen
+    cmp eax,Monto
+    jl FondosInsuficientes
+
+    ;---------------------------------------------------------
+    ; Restar del origen
+    ;---------------------------------------------------------
+
+    mov eax,SaldoOrigen
+    sub eax,Monto
+    mov CuentaActual.Saldo,eax
+
+    ;---------------------------------------------------------
+    ; Buscar cuenta destino
+    ;---------------------------------------------------------
+
+    invoke BuscarCuenta, lpDestino
+    cmp eax,FALSE
+    je CuentaDestinoNoExiste
+
+    ;---------------------------------------------------------
+    ; Sumar al destino
+    ;---------------------------------------------------------
+
+    mov eax,CuentaActual.Saldo
+    add eax,Monto
+    mov CuentaActual.Saldo,eax
+
+    ;---------------------------------------------------------
+    ; Guardar cambios
+    ;---------------------------------------------------------
+
+    invoke GuardarBanco
+
+    mov eax,TRUE
+    ret
+
+;-------------------------------------------------------------
+; Errores
+;-------------------------------------------------------------
+
+FondosInsuficientes:
+
+    mov eax,FALSE
+    ret
+
+CuentaDestinoNoExiste:
+
+    mov eax,FALSE
+    ret
+
+TransferError:
+
+    mov eax,FALSE
+    ret
+
+TransferirDinero ENDP
+
 
