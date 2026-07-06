@@ -423,3 +423,173 @@ FinLinea:
     ret
 
 LeerLinea ENDP
+
+
+;=============================================================
+; PARTE 4/14
+; Separar los campos:
+; usuario|pin|saldo
+;=============================================================
+
+;-------------------------------------------------------------
+; Variables para los campos
+;-------------------------------------------------------------
+
+.data?
+
+CampoUsuario db MAX_USUARIO dup(?)
+CampoPIN     db MAX_PIN dup(?)
+CampoSaldo   db 16 dup(?)
+
+;-------------------------------------------------------------
+; SepararCampos
+;
+; Convierte:
+;
+; isai|1234|15000
+;
+; en:
+;
+; CampoUsuario = isai
+; CampoPIN     = 1234
+; CampoSaldo   = 15000
+;-------------------------------------------------------------
+
+.code
+
+SepararCampos PROC
+
+    LOCAL indice:DWORD
+    LOCAL estado:DWORD
+
+    ;---------------------------------------------
+    ; Limpiar buffers
+    ;---------------------------------------------
+
+    invoke RtlZeroMemory,\
+            ADDR CampoUsuario,\
+            SIZEOF CampoUsuario
+
+    invoke RtlZeroMemory,\
+            ADDR CampoPIN,\
+            SIZEOF CampoPIN
+
+    invoke RtlZeroMemory,\
+            ADDR CampoSaldo,\
+            SIZEOF CampoSaldo
+
+    mov indice,0
+    mov estado,0
+
+    mov esi,OFFSET BufferLinea
+
+LeerCaracter:
+
+    mov al,[esi]
+
+    cmp al,0
+    je FinSeparacion
+
+    ;---------------------------------------------
+    ; ¿Separador?
+    ;---------------------------------------------
+
+    cmp al,'|'
+    jne CopiarCaracter
+
+    inc estado
+    mov indice,0
+
+    inc esi
+
+    jmp LeerCaracter
+
+CopiarCaracter:
+
+    ;---------------------------------------------
+    ; Campo Usuario
+    ;---------------------------------------------
+
+    cmp estado,0
+    jne CampoPIN_Parte
+
+    mov edi,OFFSET CampoUsuario
+
+    mov eax,indice
+
+    add edi,eax
+
+    mov [edi],al
+
+    inc indice
+    inc esi
+
+    jmp LeerCaracter
+
+CampoPIN_Parte:
+
+    ;---------------------------------------------
+    ; Campo PIN
+    ;---------------------------------------------
+
+    cmp estado,1
+    jne CampoSaldo_Parte
+
+    mov edi,OFFSET CampoPIN
+
+    mov eax,indice
+
+    add edi,eax
+
+    mov [edi],al
+
+    inc indice
+    inc esi
+
+    jmp LeerCaracter
+
+CampoSaldo_Parte:
+
+    ;---------------------------------------------
+    ; Campo Saldo
+    ;---------------------------------------------
+
+    mov edi,OFFSET CampoSaldo
+
+    mov eax,indice
+
+    add edi,eax
+
+    mov [edi],al
+
+    inc indice
+    inc esi
+
+    jmp LeerCaracter
+
+FinSeparacion:
+
+    ;---------------------------------------------
+    ; Agregar fin de cadena
+    ;---------------------------------------------
+
+    mov edi,OFFSET CampoUsuario
+    invoke lstrlen,edi
+    add edi,eax
+    mov BYTE PTR [edi],0
+
+    mov edi,OFFSET CampoPIN
+    invoke lstrlen,edi
+    add edi,eax
+    mov BYTE PTR [edi],0
+
+    mov edi,OFFSET CampoSaldo
+    invoke lstrlen,edi
+    add edi,eax
+    mov BYTE PTR [edi],0
+
+    mov eax,TRUE
+    ret
+
+SepararCampos ENDP
+
